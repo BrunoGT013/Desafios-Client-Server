@@ -4,15 +4,9 @@
 # Demonstração manual da conversão IEEE-754 32 bits
 ####################################################
 
-# Este script NÃO é usado pela aplicação client/server (que usa struct.pack
-# / struct.unpack). Ele existe só para vocês conseguirem explicar ao
-# professor, passo a passo e manualmente, como um número decimal vira
-# ponto flutuante 32 bits e vice-versa, como pede o item "Nota A+".
-
 import struct
 import sys
 
-# corrige acentuação no console do Windows (cp1252 por padrão)
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
 
@@ -21,7 +15,6 @@ def decimalParaIEEE754(numero):
     sinal = 0 if numero >= 0 else 1
     valor = abs(numero)
 
-    # 1) separa parte inteira e fracionária, converte cada uma para binário
     parteInteira = int(valor)
     parteFracionaria = valor - parteInteira
 
@@ -29,7 +22,7 @@ def decimalParaIEEE754(numero):
 
     binFracionario = ""
     frac = parteFracionaria
-    for _ in range(30):  # bits de sobra, serão cortados depois
+    for _ in range(30):
         frac *= 2
         bit = int(frac)
         binFracionario += str(bit)
@@ -37,30 +30,24 @@ def decimalParaIEEE754(numero):
         if frac == 0:
             break
 
-    # 2) normaliza para a forma 1.xxxx * 2^expoente (mantissa normalizada)
     if parteInteira > 0:
         expoente = len(binInteiro) - 1
         mantissaBits = (binInteiro[1:] + binFracionario)
     else:
-        # numero < 1: desloca a virgula para a direita ate achar o primeiro 1
         primeiroUm = binFracionario.index('1')
         expoente = -(primeiroUm + 1)
         mantissaBits = binFracionario[primeiroUm + 1:]
 
-    # mantissa tem 23 bits; arredonda (round-half-up) olhando o bit seguinte,
-    # em vez de simplesmente truncar (senão o último bit pode não bater
-    # com o resultado de struct.pack, que arredonda)
     mantissaBits = (mantissaBits + "0" * 24)[:24]
     mantissaInt = int(mantissaBits[:23], 2)
     bitArredondamento = mantissaBits[23]
     if bitArredondamento == '1':
         mantissaInt += 1
-        if mantissaInt >= (1 << 23):  # overflow: 1.111...1 + 1 = 10.000...0
+        if mantissaInt >= (1 << 23):
             mantissaInt = 0
             expoente += 1
     mantissaBits = format(mantissaInt, '023b')
 
-    # 3) expoente com bias de 127, em 8 bits
     expoenteComBias = expoente + 127
     expoenteBits = format(expoenteComBias, '08b')
 
