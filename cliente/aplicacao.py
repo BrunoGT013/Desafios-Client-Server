@@ -61,10 +61,18 @@ def main():
         print("-------------------------------------")
         somaLocal = 0.0
         for numero in numeros:
-            print("Enviando: {:.6f}".format(numero))
-            com1.sendData(struct.pack('>f', numero))
+            # o numero que realmente viaja é o float32 (perde um pouco de
+            # precisao ao converter), entao somamos essa versao arredondada
+            # aqui tambem - assim a soma local fica igual a que o servidor
+            # vai calcular, e nao fica "inconsistencia" por causa de
+            # arredondamento
+            bytesNumero = struct.pack('>f', numero)
+            numeroEnviado = struct.unpack('>f', bytesNumero)[0]
+
+            print("Enviando: {:.6f}".format(numeroEnviado))
+            com1.sendData(bytesNumero)
             com1.tx.getStatus()
-            somaLocal += numero
+            somaLocal += numeroEnviado
 
         # Marcador de fim de transmissão: o servidor não sabe quantos
         # números virão, então esse marcador é quem sinaliza o término.
